@@ -1,0 +1,251 @@
+Project: Streamlit Chatbot with Ollama
+
+This guide provides a complete, end-to-end process for setting up a chatbot using Streamlit and Ollama.  It includes the full code, step-by-step instructions, and explanations.
+
+1. Prerequisites
+
+Python 3.7 or higher: Make sure you have Python installed.  You can check your version by running python3 --version in your terminal.
+
+Ollama: Download and install Ollama from https://ollama.ai/.  Follow the installation instructions for your operating system.
+
+VS Code (Recommended): A good code editor.  Download from https://code.visualstudio.com/.
+
+Git: For version control.  Download from https://git-scm.com/.
+
+GitHub Account: To store your code.  Sign up at https://github.com/.
+
+2. Setting up the Project
+
+Step 1: Create a Project Directory
+
+Open your terminal or VS Code terminal and create a directory for your project:
+
+mkdir streamlit-ollama-chatbot
+cd streamlit-ollama-chatbot
+
+Step 2: Create a Virtual Environment (Recommended)
+
+Create a virtual environment to manage your project's dependencies:
+
+python3 -m venv venv
+
+Activate the virtual environment:
+
+On Windows:
+
+venv\Scripts\activate
+
+On macOS/Linux:
+
+source venv/bin/activate
+
+Step 3: Install Dependencies
+
+Install the required Python packages:
+
+pip install streamlit requests
+
+Step 4: Create the app.py File
+
+Create a file named app.py in your project directory and paste the following code into it:
+
+import streamlit as st
+import requests
+import json
+
+# Streamlit UI setup
+st.title("Simple Chatbot with Ollama")
+# Initialize chat history
+if "messages" not in st.session_state:
+    st.session_state.messages = []
+
+# Input for the Ollama model name.  Make this a selectbox.
+model_name = st.sidebar.selectbox(
+    "Choose an Ollama model:",
+    ["mistral", "llama2", "codellama"],  # Add more models as they become available
+    index=0,  # Default to the first model in the list
+)
+# System prompt
+system_prompt = st.sidebar.text_area(
+    "System Prompt (Optional):",
+    "You are a helpful assistant.",
+    help="Customize the bot's behavior with a system prompt.",
+)
+
+ollama_url = "http://localhost:11434/api/chat"  # Default Ollama API endpoint
+
+def send_message_to_ollama(message, model=model_name, system_prompt_input=system_prompt):
+    """
+    Sends a message to the Ollama API and returns the response.
+
+    Args:
+        message (str): The user's message.
+        model (str, optional): The Ollama model to use. Defaults to "mistral".
+        system_prompt_input (str, optional): The system prompt. Defaults to "You are a helpful assistant.".
+
+    Returns:
+        str: The model's response, or None on error.
+    """
+    try:
+        data = {
+            "model": model,
+            "messages": [
+                {"role": "system", "content": system_prompt_input},
+                {"role": "user", "content": message},
+            ],
+            "stream": False,  # Get the full response at once for simplicity
+        }
+        response = requests.post(ollama_url, json=data)
+
+        if response.status_code == 200:
+            result = response.json()
+            # Extract the response.  Handles possible errors in the response structure.
+            if 'message' in result and 'content' in result['message']:
+                return result["message"]["content"]
+            else:
+                return "Error: Unexpected response structure from Ollama."
+        else:
+            return f"Error: Ollama API request failed with status code {response.status_code} and text: {response.text}"
+    except requests.exceptions.RequestException as e:
+        return f"Error: Failed to connect to Ollama API: {e}"
+    except json.JSONDecodeError as e:
+        return f"Error: Failed to decode JSON response from Ollama: {e}.  Response text: {response.text}"
+    except Exception as e:
+        return f"An unexpected error occurred: {e}"
+
+# Display chat messages from history on app rerun
+for message in st.session_state.messages:
+    with st.chat_message(message["role"]):
+        st.markdown(message["content"])
+
+# Accept user input
+if prompt := st.chat_input("What is your question?"):
+    # Add user message to chat history
+    st.session_state.messages.append({"role": "user", "content": prompt})
+    with st.chat_message("user"):
+        st.markdown(prompt)
+
+    # Get the response from Ollama
+    response = send_message_to_ollama(prompt)
+
+    # Display the response
+    with st.chat_message("assistant"):
+        st.markdown(response)
+    # Add assistant message to chat history
+    st.session_state.messages.append({"role": "assistant", "content": response})
+
+3. Running the Application
+
+Step 1: Start Ollama
+
+Make sure Ollama is running.  Open a new terminal and start Ollama.  The exact command might vary slightly depending on your operating system.  Follow the instructions on the Ollama website.  You'll also need to download a model (e.g., "mistral", "llama2") within Ollama.  For example, to run mistral, you would run ollama run mistral.
+
+Step 2: Run the Streamlit App
+
+In your project directory (with the virtual environment activated), run the Streamlit application:
+
+streamlit run app.py
+
+Streamlit will open your web browser and display the chatbot.
+
+4. Setting up Git and GitHub (Optional, but Recommended)
+
+Step 1: Initialize a Git Repository
+
+If you haven't already, initialize a Git repository in your project directory:
+
+git init
+
+Step 2: Create a .gitignore File
+
+Create a file named .gitignore in your project directory with the following content:
+
+venv/
+__pycache__/
+*.pyc
+.DS_Store
+
+Step 3: Commit Your Code
+
+Add your files to the staging area and commit them:
+
+git add app.py .gitignore
+git commit -m "Initial commit of chatbot code"
+
+Step 4: Create a GitHub Repository
+
+Go to https://github.com/ and create a new repository.
+
+Copy the repository URL.
+
+Step 5: Connect to the Remote Repository
+
+Add the remote repository as an origin:
+
+git remote add origin <your_repository_url>
+
+(Replace <your_repository_url> with the URL of your repository from GitHub)
+
+Step 6: Push Your Code to GitHub
+
+Push your code to the remote repository:
+
+git push -u origin main
+
+5.  Explanation of the Code
+
+Import Libraries:
+
+streamlit:  For creating the user interface.
+
+requests:  For making requests to the Ollama API.
+
+json: For handling JSON data.
+
+Streamlit UI:
+
+st.title(): Sets the title of the application.
+
+st.session_state:  Stores chat messages across user interactions.
+
+st.sidebar.selectbox:  Creates a dropdown to select the Ollama model.
+
+st.sidebar.text_area: Creates a text area for the system prompt
+
+st.chat_input():  Creates the input field for the user to type messages.
+
+st.chat_message(): Displays chat messages.
+
+send_message_to_ollama() Function:
+
+Sends the user's message to the Ollama API.
+
+Handles the API request, including error handling.
+
+Returns the response from Ollama.
+
+Chat Logic:
+
+The application displays previous chat messages.
+
+When the user enters a message, it is sent to Ollama, and the response is displayed.
+
+6.  Key Improvements
+
+Clear Instructions: Step-by-step instructions for setting up the project.
+
+Full Code: The complete code for the app.py file.
+
+Explanation: A detailed explanation of the code.
+
+GitHub Integration: Instructions for setting up Git and pushing your code to GitHub.
+
+Error Handling: Robust error handling for API requests.
+
+Virtual Environment: Using a virtual environment is strongly recommended.
+
+System Prompt: The ability to set a system prompt.
+
+Model Selection: The ability to select the model.
+
+This guide provides a solid foundation for building a chatbot with Streamlit and Ollama.  You can customize it further by adding more features, such as different models, more complex prompts, and a better user interface.
